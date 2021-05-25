@@ -1,0 +1,229 @@
+---
+title: "HR Analytics: Job Change of Data Scientists"
+author: '@Yating Xie'
+date: "May 2021"
+output:
+  html_document: default
+
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,warning = FALSE)
+options(tinytex.verbose = TRUE)
+```
+***
+
+# 1 Introduction
+## 1.1 Research Background
+In the 21st century, which embodies the personality and pursues performance, people pay more and more attention to personal needs and psychological feelings and choose and change careers more frequently. People are no longer limited to the repetition of more than 20 years, but choose more challenges and adjustments. Meanwhile, their own uncertainty also increases the rate of job transfer and resignation. This is one of the reasons why the services of headhunters and HR big data companies are so popular and growing. Whether it is the college students who have just graduated or the employees who have already had social experience, many factors lead to the increasingly high dimission situation of different types of personnel. According to the latest data, the average turnover rate for employees in all industries is around 19% this year, and the turnover rate for new employees within 90 days is more than 60%. 
+
+```{r echo=FALSE, out.width = '100%'}
+library(here)
+figure1<-here("notes","Background_dimission.png") #add a figure
+knitr::include_graphics(figure1)
+```
+The high turnover rate of new employees not only has a great impact on the business, such as the high cost of recruitment and hiring, the fault of the company's talent echelon; It also makes the recruitment and new employee training efforts go down the drain, the internal organizational morale of the enterprise falls, directly affecting the business performance of the enterprise. The empirical study found that compared with the enterprises without an effective entry management system, the dimission rate of new employees was reduced by 70%, and the time period of reaching the position competence was shortened by more than 50%. More and more enterprises recognize that onboarding management to improve the retention rate after training has become part of the employee's entire employment cycle with the highest return on human capital investment (ROI).
+
+In many industries, the big data industry, which has become increasingly important in the age of big data and algorithms, has the same problem of keeping new employees. According to a report by Gartner Consulting, the global, big data-related job entry rate is only 30%. Increasing the exploration of the factors affecting this module needs to be solved urgently. Enterprises can not only reduce the loss of replacing employees and re-recruiting by exploring the retention of new employees, but also help to improve the effect and efficiency of orientation training, so as to organize and systematically train employees, and bring long-term health and happiness experience to the whole employees and the enterprise.
+
+## 1.2 Data Background
+A company active in big data and data science wants to hire data scientists among people who have successfully passed some of its courses. Many people signed up for their training. Companies want to know if the candidates really want to work for the company or are looking for a new job after the training. Because this helps reduce costs and time, and reduces the quality of training or planning courses and candidate categories. The dataset also aims to understand the factors that lead people to leave their current jobs for human resources research. Candidates register and the company gain access to information related to demographics, education, and experience. The whole data divided to ***train*** and ***test***. Target isn't included in test but the test target values data file is in hands for related tasks. A sample submission correspond to enrollee_id of test set provided too with columns : enrollee _id , target.
+
+For more information about this dataset and how others analyzed it, click [here](https://www.kaggle.com/arashnic/hr-analytics-job-change-of-data-scientists).
+
+## 1.3 Data Features
+This data set contains a total of three data files, and only the most detailed "aug_train" is partially visualized here.The following 14 variable features are included:
+
+++ **enrollee_id**: Unique ID for candidate <br>
+++ **city**: City code <br>
+++ **city_development_index**: Developement index of the city (scaled) <br>
+++ **gender**: Gender of candidate <br>
+++ **relevent_experience**: Relevant experience of candidate <br>
+++ **enrolled_university**: Type of University course enrolled if any <br>
+++ **education_level**: Education level of candidate <br>
+++ **major_discipline**:Education major discipline of candidate <br>
+++ **experience**: Candidate total experience in years <br>
+++ **company_size**: No of employees in current employer's company <br>
+++ **company_type**: Type of current employer <br>
+++ **lastnewjob**: Difference in years between previous job and current job <br>
+++ **training_hours**: training hours completed <br>
+++ **target**: 0 – Not looking for job change, 1 – Looking for a job change <br>
+
+```{r input data, warning=FALSE, include=FALSE}
+library(tidyverse)
+library(here)
+
+#load data
+df.origin <- aug_train <- read.csv(here("data","aug_train.csv"))
+class(df.origin) #Determine the nature of the add-in
+```
+
+## 1.4 Data Wrangling
+```{r include=FALSE}
+sum(is.na(df.origin))
+is.na(df.origin)  #null value judgment
+which(is.na(df.origin),arr.ind = T)  #arr.ind=T can return the corresponding column and column coordinates of the missing value
+df1<-na.omit(df.origin)  #The na.omit function can directly delete the line on which the value resides
+```
+
+```{r}
+head(df.origin) #Showing only the first six rows of all variables in the dataset allows you to get a big picture of the dataset.
+str(df.origin) #Present the overall picture of the data set, including sample size and number of variables.
+```
+***
+
+# 2 Visualization.A-The histogram shows the relationship before the factors
+### 2.1 Data Reduction
+```{r include=FALSE}
+library(tidyverse)
+#After sorting out the original data set, a new simplified data set is created for graph drawing
+df5 <- df.origin %>% select(target,gender,education_level,company_size,experience,training_hours)
+#Create a dataset with a target value of 1
+df5.target1 <- df5 %>% group_by(target) %>%
+                       filter(target==1)
+#Create a dataset with a target value of 0
+df5.target0 <- df5 %>% group_by(target) %>%
+                       filter(target==0)
+is.na(df5.target0)  
+which(is.na(df5.target0),arr.ind = T)
+df5.target0<-na.omit(df5.target0)
+
+is.na(df5.target1)  
+which(is.na(df5.target1),arr.ind = T)
+df5.target1<-na.omit(df5.target1)
+```
+
+### 2.2  Differences in education level and training duration of new employees with different future goals
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(gganimate)
+library(gifski)
+library(av)
+
+#make a plot
+p1.0 <- ggplot(data=df5.target0, aes(x=education_level, y=training_hours, fill=education_level))
+p1.0 <- p1.0 + geom_bar(stat="identity", width=0.5)+ geom_point(color="#f2f2f2",size=1)+
+  ggtitle('New employees willing to stay')+
+  scale_y_continuous(limits = c(0,350), breaks = seq(0,350,by=50))+
+  labs(subtitle="the relationship between training duration and education",
+       x='Education Level',  y='Training Hours')+
+  scale_fill_manual(values=c("Graduate"="#d3959b","Masters"="#d66d75","Phd"="#ee9ca7",
+                             "High School"="#ffafbd","Primary School"="#ffdde1","#f2f2f2"))+
+  theme_bw()+theme(panel.grid=element_blank(),
+                   panel.border=element_blank(),
+                   axis.line=element_line(size=1,colour="gray"))
+
+p1.1 <- ggplot(data=df5.target1, aes(x=education_level, y=training_hours, fill=education_level))
+p1.1 <- p1.1 + geom_bar(stat="identity", width=0.5)+ geom_point(color="#f2f2f2",size=1)+
+  ggtitle('New employees wishing to leave')+
+  labs(subtitle="the relationship between training duration and education",
+       x='Education Level',  y='Training Hours')+
+  scale_y_continuous(limits = c(0,350), breaks = seq(0,350,by=50))+
+  scale_fill_manual(values=c("Graduate"="#d3959b","Masters"="#d66d75","Phd"="#ee9ca7",
+                             "High School"="#ffafbd","Primary School"="#ffdde1","#f2f2f2"))+
+  theme_bw()+theme(panel.grid=element_blank(),#Set the background color and grid
+                   panel.border=element_blank(),
+                   axis.line=element_line(size=1,colour="gray")) #Set the thickness of the axis and the color of the axis
+
+#Make the two figures side by side
+grid.arrange(p1.0, p1.1, ncol=1)
+```
+Comparing the employees who want to stay after the training in Figure 1 and the employees who want to leave after the training in Figure 2, the number of doctoral students who want to stay is more, and those who stay take longer to receive training.
+
+### 2.3  Differences in gender and training duration of new employees with different future goals
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+#Load the installation packages that need to use
+library(ggplot2)
+library(gridExtra)
+library(gganimate)
+library(gifski)
+library(av)
+
+#make a plot
+p2.0 <- ggplot(data=df5.target0, aes(x=gender, y=training_hours, fill=gender))
+p2.0 <- p2.0 + geom_bar(stat="identity", width=0.5, )+ geom_point(color="#e6dada",size=1)+
+  ggtitle('New employees willing to stay')+
+  labs(subtitle="the relationship between training duration and gender",
+       x='Gender',  y='Training Hours')+
+  scale_y_continuous(limits = c(0,350), breaks = seq(0,350,by=50))+
+  scale_fill_manual(values=c("Female"="#859398","Male"="#bdc3c7","Other"="#eef2f3","#e6dada"))+
+  #Set each value bar on the x-axis to show a different color
+  theme_bw()+theme(panel.grid=element_blank(),
+                   panel.border=element_blank(),
+                   axis.line=element_line(size=1,colour="black"))
+
+p2.1 <- ggplot(data=df5.target1, aes(x=gender, y=training_hours, fill=gender))
+p2.1 <- p2.1 + geom_bar(stat="identity", width=0.5, )+ geom_point(color="#e6dada",size=1)+
+  #Set the size and color of the scattered points
+  ggtitle('New employees wishing to leave')+
+  labs(subtitle="the relationship between training duration and gender",
+       x='Gender',  y='Training Hours')+
+  scale_y_continuous(limits = c(0,350), breaks = seq(0,350,by=50))+
+  scale_fill_manual(values=c("Female"="#859398","Male"="#bdc3c7","Other"="#eef2f3","#e6dada"))+
+  theme_bw()+theme(panel.grid=element_blank(),
+                   panel.border=element_blank(),
+                   axis.line=element_line(size=1,colour="black"))
+
+# Here comes the gganimate code, convert a static diagram to a motion diagram
+
+#Make the two figures side by side
+grid.arrange(p2.0, p2.1, ncol=1)
+```
+Comparing the employees who want to stay after the training in Figure 1 and the employees who want to leave after the training in Figure 2, there are more people who want to stay, especially women, and the remaining women receive longer training time, and Men are about the same in terms of number and length of training.
+
+### 2.4  Brief Summary
+The above two figures show the relationship between education level and gender and training time. At the same time, the difference in training time between different properties in a variable can be seen, and the distribution of each property can also be seen. As shown in Figure 1, it can be seen that compared with the new employees who graduated with a bachelor’s degree and a master’s degree, the new employees who graduated with a doctorate use more training time and fewer people; and in Figure 2, it can be seen that the distribution of the length of training time required by all men Very even, while women and other genders need more training time less. Of course, this may be related to the age of the subjects and other personal characteristics, and further data collection and analysis are required.
+
+
+# 3 Visualization.B-The scatter plot shows the relationship before the factors
+### 3.1 Differences in experience and training time of new employees with different future goals
+```{r df3-1, echo=TRUE}
+library(ggplot2)
+#Rearrange the X-axis coordinates in the generated chart
+df5.target0$experience <- factor(df5.target0$experience,levels=c("<1","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20",">20"))
+df5.target1$experience <- factor(df5.target1$experience,levels=c("<1","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20",">20"))
+
+#make scatter charts
+p3.0 <- ggplot(data=df5.target0,aes(x=experience,y=training_hours,color=experience))
+p3.0 + geom_point(size=1) +
+  ggtitle("New employees willing to stay") +
+  labs(subtitle = "The relationship between work experience and traning hours",
+       x='work experience',  y='Training Hours') # add theme and X - and Y-axis titles and subtitle
+
+p3.1 <- ggplot(data=df5.target1,aes(x=experience,y=training_hours,color=experience))
+p3.1 + geom_point(size=1) +
+  ggtitle("New employees wishing to leave") +
+  labs(subtitle = "The relationship between work experience and traning hours",
+       x='work experience',  y='Training Hours') 
+```
+Comparing the employees who want to stay after the training in Figure 1 and the employees who want to leave after the training in Figure 2, it is obvious that people who have received longer training want to stay more than they want to leave. From the perspective of work experience, the people who want to stay are mostly concentrated in people with medium and high work experience, while those who want to leave are mostly concentrated in newcomers with little work experience. It can be said that it reflects the information obtained from the background investigation, namely The turnover rate of young people is higher. 
+
+### 3.2 Differences in company size and training time of new employees with different future goals
+```{r df3-2, echo=TRUE}
+library(ggplot2)
+#Use the factor function to change the default order of the image axis
+df5.target0$company_size <- factor(df5.target0$company_size,levels=c("<10","10/49","50-99","100-500","500-999","1000-4999","5000-9999","10000+"))
+df5.target1$company_size <- factor(df5.target1$company_size,levels=c("<10","10/49","50-99","100-500","500-999","1000-4999","5000-9999","10000+"))
+
+#make scatter charts
+p4.0 <- ggplot(data=df5.target0,aes(x=company_size,y=training_hours,color=company_size))
+p4.0 + geom_point(size=3) +
+  ggtitle("New employees willing to stay") +
+  labs(subtitle = "The relationship between company size and traning hours",
+       x='Company Size',  y='Training Hours')
+
+p4.1 <- ggplot(data=df5.target1,aes(x=company_size,y=training_hours,color=company_size))
+p4.1 + geom_point(size=3) +
+  ggtitle("New employees wishing to leave") +
+  labs(subtitle = "The relationship between company size and traning hours",
+       x='Company Size',  y='Training Hours')
+```
+Comparing the employees who want to stay after the training in Figure 1 and the employees who want to leave after the training in Figure 2, the on-boarding rate of small companies and super-large companies is relatively high, but at the same time the turnover rate is relatively high. The side reflects that the turnover rate of general large enterprises is relatively low, the internal system is relatively stable, and there are relatively few cases of employee leaving and the need to recruit new employees.
+
+### 3.3 Brief Summary 
+These two scatter plots respectively show the relationship between past work experience and company size and training time.
+It can be clearly observed that in Figure 3, people with less work experience and more work experience require relatively less training time (except for those with more than 20 years of work experience, it is speculated that it is related to age, and the understanding and comprehension of senior employees The acceptance of new knowledge needs to be examined), people with certain work experience need more training time. It is speculated that employees with little work experience only need to deal with relatively simple tasks at the beginning of their careers, so the training time does not need to be too long, while employees with more work experience have rich experience and work-related knowledge, so the training time does not need to be too long.
+On the other hand, it can be observed from Figure 4 that the training time for companies with more employees and larger scales is relatively short, but the specific reasons and circumstances require other data for further analysis.
+
+# Summary
+Focusing on observation of training duration and observation of future purposes is more consistent with the purpose for which the data was originally collected.Through a series of data collation and visualization, it can be seen that employees with different genders, education level, work experience and company size have certain differences in training time and future purpose.
